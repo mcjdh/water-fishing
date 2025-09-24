@@ -15,7 +15,7 @@
 }
 
 body {
-    background: #000;
+    background: linear-gradient(180deg, #0a1628 0%, #1a2838 100%);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -25,10 +25,14 @@ body {
 
 .game-wrapper {
     position: relative;
-    background: #0a0a0a;
+    background: linear-gradient(135deg, #3d2817 0%, #2a1810 100%);
     padding: 20px;
-    border: 4px solid #333;
-    box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+    border: 6px solid #8b6f47;
+    border-radius: 4px;
+    box-shadow:
+        0 0 0 2px #2a1810,
+        0 8px 24px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(139, 111, 71, 0.4);
 }
 
 #gameCanvas {
@@ -39,20 +43,21 @@ body {
     image-rendering: crisp-edges;
     width: 512px;
     height: 384px;
-    border: 2px solid #444;
+    border: 3px solid #1a1410;
+    box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.8);
 }
 
 .game-ui {
     margin-top: 10px;
     padding: 10px;
-    background: #111;
-    border: 2px solid #444;
-    color: #0f0;
+    background: linear-gradient(180deg, #1a2838 0%, #0f1820 100%);
+    border: 2px solid #4a6b8a;
+    color: #7dd3fc;
     font-size: 14px;
     letter-spacing: 1px;
     display: flex;
     justify-content: space-between;
-    text-shadow: 0 0 3px #0f0;
+    text-shadow: 0 0 4px rgba(125, 211, 252, 0.5);
 }
 
 .score-display,
@@ -63,13 +68,13 @@ body {
 
 #score,
 #depth {
-    color: #ff0;
-    text-shadow: 0 0 3px #ff0;
+    color: #fbbf24;
+    text-shadow: 0 0 4px rgba(251, 191, 36, 0.6);
 }
 
 #lives {
-    color: #f44;
-    text-shadow: 0 0 3px #f44;
+    color: #fb7185;
+    text-shadow: 0 0 4px rgba(251, 113, 133, 0.5);
 }
 
 @media (max-width: 600px) {

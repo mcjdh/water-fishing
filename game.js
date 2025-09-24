@@ -1,6 +1,6 @@
 const COLORS = {
-    SKY: ['#5C94FC', '#6CA6FC', '#7CB8FC', '#8CC2FC'],
-    WATER: ['#003F7F', '#0050A0', '#0060C0', '#0070E0'],
+    SKY: ['#FF6B9D', '#FF8BA7', '#FFA5B8', '#FFB5C5'],
+    WATER: ['#1a4d5c', '#266b7a', '#2d8299', '#3d98b0'],
     SAND: '#C9A876',
     WHITE: '#FFFFFF',
     BLACK: '#000000',
@@ -13,13 +13,15 @@ const COLORS = {
 };
 
 const GAME_STATES = {
+    TITLE: 'title',
     IDLE: 'idle',
     CHARGING: 'charging',
     CASTING: 'casting',
     SINKING: 'sinking',
     WAITING: 'waiting',
     HOOKED: 'hooked',
-    REELING: 'reeling'
+    REELING: 'reeling',
+    GAME_OVER: 'gameover'
 };
 
 class SpriteRenderer {
@@ -127,10 +129,9 @@ class SpriteRenderer {
                 ' ....... '
             ],
             boat: [
-                '    .W.    ',
-                '   .WWW.   ',
-                '  .WWWWW.  ',
-                '  ...B...  ',
+                '           ',
+                '           ',
+                '  .......  ',
                 ' .BBBBBBB. ',
                 '.BBBBBBBBB.',
                 ' ......... '
@@ -187,6 +188,11 @@ class SpriteRenderer {
                     '.GGGGG.',
                     '  .G.  '
                 ]
+            ],
+            cloud: [
+                '  .....  ',
+                ' ....... ',
+                '.........'
             ]
         };
     }
@@ -267,7 +273,7 @@ class GameObject {
 }
 
 class Fish extends GameObject {
-    constructor(x, y, type, sprite, baseSpeed, points) {
+    constructor(x, y, type, sprite, baseSpeed, points, biteDistance = 35, struggleStrength = 0) {
         super(x, y, type, sprite);
         this.baseSpeed = baseSpeed;
         this.speed = baseSpeed;
@@ -277,10 +283,12 @@ class Fish extends GameObject {
         this.wanderTimer = 0;
         this.wanderInterval = 60 + Math.random() * 60;
         this.state = 'wandering';
-        this.biteDistance = 35;
+        this.biteDistance = biteDistance;
         this.chaseSpeed = 1.5;
         this.hooked = false;
         this.baseY = y;
+        this.struggleStrength = struggleStrength;
+        this.struggleTimer = 0;
     }
 
     updateWander() {
@@ -336,6 +344,16 @@ class Fish extends GameObject {
 
         return false;
     }
+
+    updateStruggle() {
+        if (this.hooked && this.struggleStrength > 0) {
+            this.struggleTimer++;
+            if (this.struggleTimer > 40 && Math.random() < this.struggleStrength * 0.008) {
+                return true;
+            }
+        }
+        return false;
+    }
 }
 
 class Bubble extends GameObject {
@@ -371,8 +389,13 @@ class RetroFishingGame {
         this.renderer = new SpriteRenderer();
         this.score = 0;
         this.depth = 0;
+        this.lives = 3;
+        this.combo = 0;
+        this.comboTimer = 0;
+        this.comboTimeout = 180;
+        this.highScore = parseInt(localStorage.getItem('fishingHighScore') || '0');
 
-        this.state = GAME_STATES.IDLE;
+        this.state = GAME_STATES.TITLE;
         this.powerCharge = 0;
         this.maxPower = 100;
         this.powerChargeSpeed = 2.0;
@@ -390,6 +413,7 @@ class RetroFishingGame {
         this.bubbles = [];
         this.seaweeds = [];
         this.treasures = [];
+        this.clouds = [];
 
         this.waterLevel = 48;
         this.boatX = 85;
@@ -398,6 +422,8 @@ class RetroFishingGame {
         this.frameCount = 0;
         this.lastFishSpawn = 0;
         this.fishSpawnInterval = 140;
+        this.baseFishSpawnInterval = 140;
+        this.difficultyLevel = 1;
 
         this.mouseDown = false;
         this.canCast = true;
@@ -408,10 +434,22 @@ class RetroFishingGame {
 
     init() {
         this.setupEventListeners();
+        this.generateClouds();
         this.generateSeaweed();
         this.spawnInitialFishes();
         this.updateUI();
         this.gameLoop();
+    }
+
+    generateClouds() {
+        for (let i = 0; i < 4; i++) {
+            this.clouds.push(new GameObject(
+                Math.random() * 230,
+                8 + Math.random() * 20,
+                'cloud',
+                this.renderer.sprites.cloud
+            ));
+        }
     }
 
     setupEventListeners() {
@@ -430,7 +468,11 @@ class RetroFishingGame {
     }
 
     handleInputStart(e) {
-        if (this.state === GAME_STATES.IDLE && this.canCast) {
+        if (this.state === GAME_STATES.TITLE) {
+            this.startGame();
+        } else if (this.state === GAME_STATES.GAME_OVER) {
+            this.restartGame();
+        } else if (this.state === GAME_STATES.IDLE && this.canCast) {
             this.state = GAME_STATES.CHARGING;
             this.powerCharge = 0;
             this.mouseDown = true;
@@ -486,8 +528,25 @@ class RetroFishingGame {
         this.fishes.forEach(fish => {
             if (!fish.hooked) {
                 fish.updateWander();
+            } else if (fish.updateStruggle()) {
+                this.fishEscaped(fish);
             }
         });
+    }
+
+    fishEscaped(fish) {
+        fish.hooked = false;
+        fish.state = 'fleeing';
+        fish.speed = fish.baseSpeed * 2.2;
+        if (this.hookedFish === fish) {
+            this.hookedFish = null;
+            this.state = GAME_STATES.WAITING;
+        }
+        setTimeout(() => {
+            fish.state = 'wandering';
+            fish.speed = fish.baseSpeed;
+        }, 1500);
+        this.createBigSplash(this.lineX, this.lineY);
     }
 
     checkFishBite() {
@@ -521,6 +580,26 @@ class RetroFishingGame {
         }
     }
 
+    checkTreasureCollection() {
+        if (this.state !== GAME_STATES.SINKING &&
+            this.state !== GAME_STATES.WAITING &&
+            this.state !== GAME_STATES.REELING) return;
+
+        this.treasures = this.treasures.filter(treasure => {
+            const dx = treasure.x - this.lineX;
+            const dy = treasure.y - this.lineY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance < 20) {
+                this.score += 100;
+                this.createBigSplash(treasure.x, treasure.y);
+                this.updateUI();
+                return false;
+            }
+            return true;
+        });
+    }
+
     createBiteEffect() {
         for (let i = 0; i < 10; i++) {
             const angle = (Math.PI * 2 / 10) * i;
@@ -533,13 +612,18 @@ class RetroFishingGame {
 
     landFish() {
         if (this.hookedFish) {
-            this.score += this.hookedFish.points;
+            const comboMultiplier = Math.min(1 + this.combo * 0.5, 3);
+            this.score += Math.floor(this.hookedFish.points * comboMultiplier);
+            this.combo++;
+            this.comboTimer = 0;
+
             const fishIndex = this.fishes.indexOf(this.hookedFish);
             if (fishIndex > -1) {
                 this.fishes.splice(fishIndex, 1);
             }
             this.hookedFish = null;
             this.createBigSplash(this.lineX, this.waterLevel);
+            this.updateDifficulty();
             this.updateUI();
         }
     }
@@ -577,14 +661,15 @@ class RetroFishingGame {
     }
 
     spawnFish() {
+        const speedMultiplier = 1 + (this.difficultyLevel - 1) * 0.15;
         const types = [
-            { sprite: 'fish1', speed: 0.5, points: 10 },
-            { sprite: 'fish2', speed: 0.7, points: 20 },
-            { sprite: 'fish3', speed: 0.9, points: 30 }
+            { sprite: 'fish1', speed: 0.5 * speedMultiplier, points: 10, biteDistance: 40, struggle: 0.3 },
+            { sprite: 'fish2', speed: 0.7 * speedMultiplier, points: 20, biteDistance: 35, struggle: 0.6 },
+            { sprite: 'fish3', speed: 0.9 * speedMultiplier, points: 30, biteDistance: 30, struggle: 0.9 }
         ];
 
         const type = types[Math.floor(Math.random() * types.length)];
-        const fromLeft = Math.random() < 0.65;
+        const fromLeft = Math.random() < 0.5;
 
         const fish = new Fish(
             fromLeft ? -20 : 276,
@@ -592,7 +677,9 @@ class RetroFishingGame {
             type.sprite,
             this.renderer.sprites[type.sprite],
             fromLeft ? type.speed : -type.speed,
-            type.points
+            type.points,
+            type.biteDistance,
+            type.struggle
         );
 
         this.fishes.push(fish);
@@ -610,8 +697,65 @@ class RetroFishingGame {
         }
     }
 
+    startGame() {
+        this.state = GAME_STATES.IDLE;
+        this.score = 0;
+        this.lives = 3;
+        this.combo = 0;
+        this.comboTimer = 0;
+        this.difficultyLevel = 1;
+        this.fishSpawnInterval = this.baseFishSpawnInterval;
+        this.fishes = [];
+        this.treasures = [];
+        this.hookedFish = null;
+        this.spawnInitialFishes();
+        this.updateUI();
+    }
+
+    restartGame() {
+        this.startGame();
+    }
+
+    loseLife() {
+        this.lives--;
+        this.combo = 0;
+        this.updateUI();
+        this.createBigSplash(this.boatX, this.waterLevel);
+
+        if (this.lives <= 0) {
+            this.state = GAME_STATES.GAME_OVER;
+            if (this.score > this.highScore) {
+                this.highScore = this.score;
+                localStorage.setItem('fishingHighScore', this.score.toString());
+            }
+        }
+    }
+
+    updateDifficulty() {
+        const oldLevel = this.difficultyLevel;
+        this.difficultyLevel = Math.floor(this.score / 100) + 1;
+
+        if (this.difficultyLevel !== oldLevel) {
+            this.fishSpawnInterval = Math.max(60, this.baseFishSpawnInterval - (this.difficultyLevel - 1) * 12);
+        }
+    }
+
     update() {
         this.frameCount++;
+
+        if (this.state === GAME_STATES.TITLE || this.state === GAME_STATES.GAME_OVER) {
+            this.fishes.forEach(fish => fish.updateWander());
+            this.bubbles = this.bubbles.filter(bubble => bubble.update());
+            this.seaweeds.forEach(seaweed => seaweed.update());
+            return;
+        }
+
+        if (this.combo > 0) {
+            this.comboTimer++;
+            if (this.comboTimer > this.comboTimeout) {
+                this.combo = 0;
+            }
+        }
 
         switch(this.state) {
             case GAME_STATES.IDLE:
@@ -697,6 +841,8 @@ class RetroFishingGame {
                 } else {
                     if (this.hookedFish) {
                         this.landFish();
+                    } else {
+                        this.loseLife();
                     }
                     this.state = GAME_STATES.IDLE;
                     this.depth = 0;
@@ -709,6 +855,7 @@ class RetroFishingGame {
 
         this.updateFish();
         this.checkFishBite();
+        this.checkTreasureCollection();
 
         if (this.frameCount - this.lastFishSpawn > this.fishSpawnInterval) {
             if (this.fishes.length < 5) {
@@ -737,6 +884,18 @@ class RetroFishingGame {
             this.ctx.fillRect(0, y, 256, 1);
         }
 
+        this.clouds.forEach(cloud => {
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            cloud.x += 0.08;
+            if (cloud.x > 260) cloud.x = -20;
+            this.renderer.drawSprite(
+                this.ctx,
+                cloud.sprite,
+                cloud.x,
+                cloud.y
+            );
+        });
+
         for (let y = this.waterLevel; y < 192; y++) {
             const gradient = (y - this.waterLevel) / (192 - this.waterLevel);
             const colorIndex = Math.floor(gradient * (COLORS.WATER.length - 1));
@@ -744,10 +903,10 @@ class RetroFishingGame {
             this.ctx.fillRect(0, y, 256, 1);
         }
 
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-        for (let i = 0; i < 3; i++) {
-            const waveY = this.waterLevel + Math.sin(this.frameCount * 0.02 + i * 2) * 2;
-            this.ctx.fillRect(0, waveY + i * 3, 256, 1);
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+        for (let i = 0; i < 5; i++) {
+            const waveY = this.waterLevel + Math.sin(this.frameCount * 0.03 + i * 1.5) * 1.5;
+            this.ctx.fillRect(0, waveY + i * 2, 256, 1);
         }
     }
 
@@ -762,7 +921,7 @@ class RetroFishingGame {
             this.ctx.fillRect(meterX - 1, meterY - 1, meterWidth + 2, meterHeight + 2);
 
             const fillWidth = (this.powerCharge / this.maxPower) * meterWidth;
-            const hue = (1 - this.powerCharge / this.maxPower) * 120;
+            const hue = (this.powerCharge / this.maxPower) * 120;
             this.ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
             this.ctx.fillRect(meterX, meterY, fillWidth, meterHeight);
 
@@ -833,14 +992,14 @@ class RetroFishingGame {
             this.ctx,
             this.renderer.sprites.boat,
             this.boatX - 10,
-            this.boatY
+            this.boatY + 2
         );
 
         this.renderer.drawSprite(
             this.ctx,
             this.renderer.sprites.fisher,
             this.boatX - 8,
-            this.boatY - 16
+            this.boatY - 10
         );
 
         if (this.state !== GAME_STATES.IDLE && this.state !== GAME_STATES.CHARGING) {
@@ -877,7 +1036,60 @@ class RetroFishingGame {
             this.ctx.fillText('HOOKED!', this.lineX - 22, this.lineY - 12);
         }
 
-        if (this.state === GAME_STATES.IDLE) {
+        if (this.combo > 1) {
+            this.ctx.fillStyle = COLORS.YELLOW;
+            this.ctx.font = 'bold 10px monospace';
+            const comboText = `COMBO x${this.combo}!`;
+            this.ctx.fillText(comboText, 128 - comboText.length * 3, 20);
+        }
+
+        if (this.state === GAME_STATES.TITLE) {
+            this.ctx.fillStyle = 'rgba(0,0,0,0.75)';
+            this.ctx.fillRect(0, 0, 256, 192);
+
+            this.ctx.fillStyle = COLORS.YELLOW;
+            this.ctx.font = 'bold 16px monospace';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText('8-BIT FISHING', 128, 70);
+
+            this.ctx.fillStyle = COLORS.WHITE;
+            this.ctx.font = '8px monospace';
+            this.ctx.fillText('CLICK TO START', 128, 110);
+
+            if (this.highScore > 0) {
+                this.ctx.fillStyle = COLORS.GREEN;
+                this.ctx.font = '7px monospace';
+                this.ctx.fillText(`HIGH SCORE: ${this.highScore}`, 128, 135);
+            }
+            this.ctx.textAlign = 'left';
+        } else if (this.state === GAME_STATES.GAME_OVER) {
+            this.ctx.fillStyle = 'rgba(0,0,0,0.75)';
+            this.ctx.fillRect(0, 0, 256, 192);
+
+            this.ctx.fillStyle = COLORS.RED;
+            this.ctx.font = 'bold 16px monospace';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText('GAME OVER', 128, 70);
+
+            this.ctx.fillStyle = COLORS.YELLOW;
+            this.ctx.font = '10px monospace';
+            this.ctx.fillText(`SCORE: ${this.score}`, 128, 95);
+
+            if (this.score === this.highScore && this.score > 0) {
+                this.ctx.fillStyle = COLORS.GREEN;
+                this.ctx.font = '8px monospace';
+                this.ctx.fillText('NEW HIGH SCORE!', 128, 115);
+            } else if (this.highScore > 0) {
+                this.ctx.fillStyle = COLORS.WHITE;
+                this.ctx.font = '8px monospace';
+                this.ctx.fillText(`HIGH: ${this.highScore}`, 128, 115);
+            }
+
+            this.ctx.fillStyle = COLORS.WHITE;
+            this.ctx.font = '7px monospace';
+            this.ctx.fillText('CLICK TO RESTART', 128, 145);
+            this.ctx.textAlign = 'left';
+        } else if (this.state === GAME_STATES.IDLE) {
             this.ctx.fillStyle = 'rgba(255,255,255,0.6)';
             this.ctx.font = '7px monospace';
             this.ctx.fillText('HOLD TO CAST', 6, 186);
@@ -895,6 +1107,9 @@ class RetroFishingGame {
     updateUI() {
         const scoreStr = String(this.score).padStart(5, '0');
         document.getElementById('score').textContent = scoreStr;
+
+        const livesStr = '♥'.repeat(this.lives) + '♡'.repeat(Math.max(0, 3 - this.lives));
+        document.getElementById('lives').textContent = livesStr;
     }
 
     render() {
