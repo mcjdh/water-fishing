@@ -106,27 +106,27 @@ export class SpriteRenderer {
             ],
             boat: [
                 '           ',
-                '           ',
-                '  .......  ',
-                ' .BBBBBBB. ',
-                '.BBBBBBBBB.',
-                ' ......... '
+                '   llll    ',
+                '  lHHHHl   ',
+                ' .sDDDDDs. ',
+                ' dDDDDDDd ',
+                '  ..ddd..  '
             ],
             fisher: [
-                '  .OOO.  ',
-                '  .OOO.  ',
-                '  .OOO.  ',
-                ' ..RRR.. ',
-                '.R.RRR.R.',
-                '  .RRR.  ',
-                '  .B.B.  ',
-                '  .B.B.  '
+                '  pppp  ',
+                '  LLLL  ',
+                '  HHHH  ',
+                '  sSSs  ',
+                ' dSSSsd ',
+                '  ddd   ',
+                '  l l   ',
+                '  l l   '
             ],
             hook: [
-                '.W.',
-                '.W.',
-                '.W.',
-                ' . '
+                ' s ',
+                ' s ',
+                ' s ',
+                ' L '
             ],
             bubble: [
                 ' . ',
@@ -212,8 +212,16 @@ export class SpriteRenderer {
             'b': COLORS.BLUE,
             'P': COLORS.PURPLE,
             'O': COLORS.ORANGE,
-            '>': '#CC3366',
-            '.': 'rgba(0,0,0,0.3)'
+            'D': '#322c5b',
+            'd': '#211c3d',
+            's': '#5f73c8',
+            'S': '#41559a',
+            'l': '#91a0ff',
+            'L': '#f3f0ff',
+            'H': '#ffd9bd',
+            'p': '#ff88bc',
+            '>': '#ff7599',
+            '.': 'rgba(20, 18, 44, 0.35)'
         };
         return colorMap[code] || COLORS.BLACK;
     }

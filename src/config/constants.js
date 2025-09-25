@@ -1,15 +1,15 @@
 export const COLORS = {
-    SKY: ['#FF6B9D', '#FF8BA7', '#FFA5B8', '#FFB5C5'],
-    WATER: ['#1a4d5c', '#266b7a', '#2d8299', '#3d98b0'],
-    SAND: '#C9A876',
-    WHITE: '#FFFFFF',
-    BLACK: '#000000',
-    RED: '#FF0044',
-    YELLOW: '#FFD700',
-    GREEN: '#00FF00',
-    BLUE: '#0080FF',
-    PURPLE: '#B040FF',
-    ORANGE: '#FF8800'
+    SKY: ['#f9d9a8', '#f09ac0', '#b97ae2', '#5742d4'],
+    WATER: ['#14233b', '#1d3854', '#235271', '#2c6f8d'],
+    SAND: '#d4b679',
+    WHITE: '#f8f4ff',
+    BLACK: '#0d0c1a',
+    RED: '#ff4f6d',
+    YELLOW: '#ffd861',
+    GREEN: '#7ae582',
+    BLUE: '#5ec6ff',
+    PURPLE: '#b786ff',
+    ORANGE: '#ffa45c'
 };
 
 export const GAME_STATES = {

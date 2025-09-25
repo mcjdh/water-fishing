@@ -1,5 +1,5 @@
 import { GameObject } from './GameObject.js';
-import { randomRange } from '../utils/math.js';
+import { randomRange, TWO_PI } from '../utils/math.js';
 import { TUNING } from '../config/tuning.js';
 
 export class Bubble extends GameObject {
@@ -7,7 +7,7 @@ export class Bubble extends GameObject {
         super(x, y, 'bubble', null);
         this.size = 1;
         this.riseSpeed = randomRange(...TUNING.bubbleRiseRange);
-        this.wobble = randomRange(0, Math.PI * 2);
+        this.wobble = randomRange(0, TWO_PI);
         this.wobbleSpeed = 0.1;
         this.lifetime = randomRange(...TUNING.bubbleLifetimeRange);
         this.age = 0;

@@ -15,24 +15,62 @@
 }
 
 body {
-    background: linear-gradient(180deg, #0a1628 0%, #1a2838 100%);
+    background:
+        radial-gradient(circle at 20% -10%, rgba(255, 200, 180, 0.25) 0%, transparent 55%),
+        radial-gradient(circle at 70% -10%, rgba(143, 121, 255, 0.2) 0%, transparent 50%),
+        linear-gradient(180deg, #130b26 0%, #070612 40%, #04030b 100%);
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    font-family: 'Courier New', monospace;
+    font-family: 'Pixel', 'Courier New', monospace;
+    color: #e9e6ff;
+    overflow: hidden;
+    position: relative;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+        repeating-linear-gradient(
+            0deg,
+            rgba(255, 255, 255, 0.02) 0px,
+            rgba(255, 255, 255, 0.02) 2px,
+            transparent 2px,
+            transparent 4px
+        );
+    mix-blend-mode: screen;
+    opacity: 0.35;
 }
 
 .game-wrapper {
     position: relative;
-    background: linear-gradient(135deg, #3d2817 0%, #2a1810 100%);
-    padding: 20px;
-    border: 6px solid #8b6f47;
-    border-radius: 4px;
+    background:
+        linear-gradient(140deg, rgba(68, 49, 94, 0.92) 0%, rgba(25, 30, 64, 0.92) 100%),
+        rgba(22, 16, 46, 0.95);
+    padding: 24px 28px;
+    border: 6px solid rgba(113, 94, 186, 0.45);
+    border-radius: 10px;
     box-shadow:
-        0 0 0 2px #2a1810,
-        0 8px 24px rgba(0, 0, 0, 0.6),
-        inset 0 1px 0 rgba(139, 111, 71, 0.4);
+        0 0 0 2px rgba(32, 20, 68, 0.7),
+        0 18px 38px rgba(0, 0, 0, 0.65),
+        inset 0 1px 0 rgba(216, 198, 255, 0.15);
+    backdrop-filter: blur(4px);
+}
+
+.game-wrapper::after {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    border-radius: 6px;
+    border: 1px solid rgba(220, 200, 255, 0.2);
+    pointer-events: none;
+    box-shadow:
+        0 0 18px rgba(102, 76, 201, 0.35),
+        inset 0 0 14px rgba(47, 104, 181, 0.25);
 }
 
 #gameCanvas {
@@ -43,38 +81,83 @@ body {
     image-rendering: crisp-edges;
     width: 512px;
     height: 384px;
-    border: 3px solid #1a1410;
-    box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.8);
+    border: 3px solid rgba(49, 37, 87, 0.9);
+    border-radius: 6px;
+    box-shadow:
+        inset 0 0 18px rgba(12, 8, 28, 0.85),
+        0 0 24px rgba(99, 162, 255, 0.18);
 }
 
 .game-ui {
-    margin-top: 10px;
-    padding: 10px;
-    background: linear-gradient(180deg, #1a2838 0%, #0f1820 100%);
-    border: 2px solid #4a6b8a;
-    color: #7dd3fc;
-    font-size: 14px;
-    letter-spacing: 1px;
+    margin-top: 14px;
+    padding: 12px 16px;
+    background:
+        linear-gradient(180deg, rgba(18, 30, 58, 0.92) 0%, rgba(10, 18, 34, 0.94) 100%);
+    border: 2px solid rgba(86, 129, 206, 0.45);
+    box-shadow:
+        inset 0 0 12px rgba(40, 76, 128, 0.25),
+        0 6px 16px rgba(0, 0, 0, 0.5);
+    color: #cbe3ff;
+    font-size: 15px;
+    letter-spacing: 2px;
     display: flex;
     justify-content: space-between;
-    text-shadow: 0 0 4px rgba(125, 211, 252, 0.5);
+    align-items: center;
+    gap: 18px;
+    text-shadow: 0 0 6px rgba(97, 172, 255, 0.35);
+    border-radius: 6px;
 }
 
 .score-display,
 .depth-display,
 .lives-display {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     font-weight: bold;
+    text-transform: uppercase;
+}
+
+.score-display::before,
+.depth-display::before,
+.lives-display::before {
+    content: '';
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(151, 210, 255, 0.5);
+}
+
+.score-display::before {
+    background: radial-gradient(circle at 30% 30%, #fff4b8 0%, #ffd55f 55%, rgba(255, 192, 76, 0) 100%);
+}
+
+.depth-display::before {
+    background: radial-gradient(circle at 30% 30%, #d3f4ff 0%, #7cc6ff 55%, rgba(93, 171, 255, 0) 100%);
+}
+
+.lives-display::before {
+    background: radial-gradient(circle at 30% 30%, #ffd7eb 0%, #ff91c9 55%, rgba(255, 0, 120, 0) 100%);
 }
 
 #score,
 #depth {
-    color: #fbbf24;
-    text-shadow: 0 0 4px rgba(251, 191, 36, 0.6);
+    color: #ffe27a;
+    text-shadow: 0 0 6px rgba(255, 197, 87, 0.55);
 }
 
 #lives {
-    color: #fb7185;
-    text-shadow: 0 0 4px rgba(251, 113, 133, 0.5);
+    color: #ff96c5;
+    text-shadow: 0 0 6px rgba(255, 149, 188, 0.5);
+}
+
+.ui-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    background: radial-gradient(circle at 40% 40%, #ffffff 0%, #a4c9ff 50%, rgba(105, 165, 255, 0) 100%);
+    box-shadow: 0 0 8px rgba(135, 196, 255, 0.6);
+    border-radius: 50%;
 }
 
 @media (max-width: 600px) {

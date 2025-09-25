@@ -7,7 +7,7 @@ export class Fish extends GameObject {
         this.baseSpeed = baseSpeed;
         this.speed = baseSpeed;
         this.points = points;
-        this.direction = baseSpeed > 0 ? 1 : -1;
+        this.direction = baseSpeed < 0 ? 1 : -1;
         this.targetY = y;
         this.wanderTimer = 0;
         this.wanderInterval = randomRange(60, 120);
@@ -18,6 +18,15 @@ export class Fish extends GameObject {
         this.baseY = y;
         this.struggleStrength = struggleStrength;
         this.struggleTimer = 0;
+        this.updateDirectionFromSpeed();
+    }
+
+    updateDirectionFromSpeed() {
+        if (this.speed > 0) {
+            this.direction = -1;
+        } else if (this.speed < 0) {
+            this.direction = 1;
+        }
     }
 
     updateWander() {
@@ -28,6 +37,7 @@ export class Fish extends GameObject {
         }
 
         this.x += this.speed;
+        this.updateDirectionFromSpeed();
 
         this.wanderTimer++;
         if (this.wanderTimer > this.wanderInterval) {
@@ -65,9 +75,11 @@ export class Fish extends GameObject {
         } else if (this.state === 'chasing') {
             this.state = 'fleeing';
             this.speed = this.baseSpeed * 1.8;
+            this.updateDirectionFromSpeed();
             setTimeout(() => {
                 this.state = 'wandering';
                 this.speed = this.baseSpeed;
+                this.updateDirectionFromSpeed();
             }, 1200);
         }
 

@@ -2,7 +2,7 @@ import { COLORS, GAME_STATES, GAME_DIMENSIONS, BOAT_POSITION, MAX_FISH_ON_SCREEN
 import { AUDIO_CUES } from '../config/audioCues.js';
 import { FISH_TYPES } from '../config/fishTypes.js';
 import { TUNING } from '../config/tuning.js';
-import { clamp, randomRange } from '../utils/math.js';
+import { clamp, randomRange, TWO_PI } from '../utils/math.js';
 import { SpriteRenderer } from '../rendering/SpriteRenderer.js';
 import { GameObject } from '../entities/GameObject.js';
 import { Fish } from '../entities/Fish.js';
@@ -51,6 +51,7 @@ export class RetroFishingGame {
         this.seaweeds = [];
         this.treasures = [];
         this.clouds = [];
+        this.stars = [];
 
         this.waterLevel = this.dimensions.WATER_LINE;
         this.boatX = BOAT_POSITION.X;
@@ -73,7 +74,7 @@ export class RetroFishingGame {
         this.tensionBreakWindow = 110;
         this.fightStartDepth = 0;
         this.fightDepthLimit = 0;
-        this.fishSurgePhase = randomRange(0, Math.PI * 2);
+        this.fishSurgePhase = randomRange(0, TWO_PI);
         this.wasTensionSafe = true;
 
         this.stateHandlers = stateHandlers;
@@ -83,6 +84,7 @@ export class RetroFishingGame {
 
     init() {
         this.setupEventListeners();
+        this.generateStars();
         this.generateClouds();
         this.generateSeaweed();
         this.spawnInitialFishes();
@@ -201,6 +203,19 @@ export class RetroFishingGame {
                 'cloud',
                 this.renderer.sprites.cloud
             ));
+        }
+    }
+
+    generateStars() {
+        const starCount = 42;
+        for (let i = 0; i < starCount; i++) {
+            this.stars.push({
+                x: randomRange(2, this.dimensions.WIDTH - 2),
+                y: randomRange(4, this.waterLevel - 6),
+                baseAlpha: randomRange(0.35, 0.75),
+                radius: Math.random() < 0.2 ? 2 : 1,
+                phase: randomRange(0, TWO_PI)
+            });
         }
     }
 
@@ -370,6 +385,7 @@ export class RetroFishingGame {
         fish.hooked = false;
         fish.state = 'fleeing';
         fish.speed = fish.baseSpeed * 2.2;
+        fish.updateDirectionFromSpeed && fish.updateDirectionFromSpeed();
         if (this.hookedFish === fish) {
             this.hookedFish = null;
             this.setState(GAME_STATES.WAITING);
@@ -377,6 +393,7 @@ export class RetroFishingGame {
         setTimeout(() => {
             fish.state = 'wandering';
             fish.speed = fish.baseSpeed;
+            fish.updateDirectionFromSpeed && fish.updateDirectionFromSpeed();
         }, 1500);
         this.createBigSplash(this.lineX, this.lineY);
     }
@@ -416,6 +433,7 @@ export class RetroFishingGame {
         this.hookedFish = fish;
         this.setState(GAME_STATES.HOOKED);
         fish.hooked = true;
+        fish.direction = this.boatX >= fish.x ? 1 : -1;
 
         this.fightStartDepth = this.lineY;
         this.fightDepthLimit = Math.min(this.waterLevel + 128, this.lineY + 32 + fish.struggleStrength * 12);
@@ -427,7 +445,7 @@ export class RetroFishingGame {
         this.tensionSafeMin = Math.max(16, center - halfBand);
         this.tensionSafeMax = Math.min(84, center + halfBand);
         this.tensionDangerTimer = 0;
-        this.fishSurgePhase = randomRange(0, Math.PI * 2);
+        this.fishSurgePhase = randomRange(0, TWO_PI);
         this.wasTensionSafe = true;
 
         const safeMid = (this.tensionSafeMin + this.tensionSafeMax) / 2;
@@ -465,7 +483,7 @@ export class RetroFishingGame {
 
     createBiteEffect() {
         for (let i = 0; i < 10; i++) {
-            const angle = (Math.PI * 2 / 10) * i;
+            const angle = (TWO_PI / 10) * i;
             this.bubbles.push(new Bubble(
                 this.lineX + Math.cos(angle) * 12,
                 this.lineY + Math.sin(angle) * 12
@@ -582,6 +600,7 @@ export class RetroFishingGame {
         const wiggle = Math.sin(this.frameCount * 0.18) * (3 + fish.struggleStrength * 1.4);
         fish.x = this.lineX + wiggle;
         fish.y = this.lineY + Math.cos(this.frameCount * 0.14) * (2 + fish.struggleStrength);
+        fish.direction = this.boatX >= fish.x ? 1 : -1;
 
         if (Math.random() < 0.08) {
             this.bubbles.push(new Bubble(
@@ -634,6 +653,18 @@ export class RetroFishingGame {
             this.ctx.fillStyle = COLORS.SKY[colorIndex];
             this.ctx.fillRect(0, y, this.dimensions.WIDTH, 1);
         }
+
+        this.stars.forEach((star) => {
+            const pulse = (Math.sin(this.frameCount * 0.05 + star.phase) + 1) / 2;
+            const alpha = Math.min(1, star.baseAlpha + pulse * 0.4);
+            this.ctx.fillStyle = `rgba(255, 244, 225, ${alpha})`;
+            this.ctx.fillRect(star.x, star.y, star.radius, star.radius);
+            if (star.radius > 1) {
+                this.ctx.fillStyle = `rgba(255, 210, 235, ${alpha * 0.6})`;
+                this.ctx.fillRect(star.x - 1, star.y, 1, 1);
+                this.ctx.fillRect(star.x + star.radius, star.y, 1, 1);
+            }
+        });
 
         this.clouds.forEach((cloud) => {
             this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
@@ -827,12 +858,15 @@ export class RetroFishingGame {
 
         this.ctx.fillStyle = COLORS.YELLOW;
         this.ctx.font = '7px monospace';
-        this.ctx.fillText('TENSION', meterX + meterWidth / 2 - 22, meterY + meterHeight + 11);
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('TENSION', meterX + meterWidth / 2, meterY + meterHeight + 11);
 
         const tip = this.isReeling ? 'EASE OFF IF IT REDLINES' : 'WAIT FOR A TUG';
-        this.ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        this.ctx.fillStyle = 'rgba(240,240,255,0.85)';
         this.ctx.font = '7px monospace';
-        this.ctx.fillText(tip, 128 - tip.length * 3, 32);
+        this.ctx.textAlign = 'left';
+        this.ctx.fillText(tip, meterX + meterWidth + 8, meterY + meterHeight - 1);
+        this.ctx.textAlign = 'left';
     }
 
     drawOverlays() {
